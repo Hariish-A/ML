@@ -14,6 +14,14 @@ df = pd.read_csv(r"/content/sample_data/DIABETICS DATASET.csv")
 scaler = RobustScaler()
 df = pd.DataFrame(scaler.fit_transform(df), columns=df.columns)
 
+#removing outliers
+Q1 = df['Outcome'].quantile(0.25)
+Q3 = df['Outcome'].quantile(0.75)
+IQR = Q3 - Q1
+lowerbound = Q1 - 1.5 * IQR
+upperbound = Q3 + 1.5 * IQR
+df = df[(df['Outcome'] >= lowerbound) & (df['Outcome'] <= upperbound)]
+
 df.corr()
 
 # Define independent variables and the target variable
