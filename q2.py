@@ -15,7 +15,7 @@ def log_loss(y, y_pred):
     return -(y * np.log(y_pred)) - ((1 - y) * np.log(1 - y_pred))
 
 # Compute cost
-def compute_cost(y, y_pred):
+def cost_function(y, y_pred):
     m = len(y)
     cost = np.sum(log_loss(y, y_pred)) / m
     return cost
@@ -23,13 +23,14 @@ def compute_cost(y, y_pred):
 # Gradient Descent
 def gradient_descent(X, y, alpha=0.01, epochs=1000):
     m, n = X.shape
+    
     w = np.zeros(n)
     b = 0
     cost_history = []
 
     for i in range(epochs):
-        z = np.dot(X, w) + b 
-        y_pred = sigmoid(z) 
+        z = np.dot(X, w) + b
+        y_pred = sigmoid(z)
 
         dw = (1 / m) * np.dot(X.T, (y_pred - y))
         db = (1 / m) * np.sum(y_pred - y)
@@ -37,7 +38,7 @@ def gradient_descent(X, y, alpha=0.01, epochs=1000):
         w -= alpha * dw
         b -= alpha * db
 
-        cost = compute_cost(y, y_pred)
+        cost = cost_function(y, y_pred)
         cost_history.append(cost)
 
     return w, b, cost_history
@@ -52,6 +53,18 @@ def predict(X, w, b):
 # Load and preprocess the data
 df = pd.read_csv(r"C:\Users\Aparna\Downloads\DIABETICS DATASET.csv")
 
+#Incase of Undersampling
+# new_df['Outcome'].value_counts()
+# class_0 = df[df["Outcome"] == 0]
+# class_1 = df[df["Outcome"] == 1]
+# class_0 = class_0.sample(n=len(class_1), random_state=42)
+# data_balanced = pd.concat([class_0, class_1])
+# df = data_balanced
+
+# To replace null values with zeros if exist in dataset
+# df[['Glucose','BMI','Age', 'Insulin']] = df[['Glucose','BMI','Age', 'Insulin']].replace(0,np.NaN)
+
+sns.heatmap(df.corr())
 df.corr()
 
 scaler = StandardScaler()
@@ -59,6 +72,7 @@ columns_to_scale = ['Glucose', 'BMI', 'Age']
 df[columns_to_scale] = scaler.fit_transform(df[columns_to_scale])
 
 X = df[['Glucose', 'BMI', 'Age']]
+y = df['Outcome']
 
 # Split data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -66,22 +80,21 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 # Train the model
 w, b, cost_history = gradient_descent(X_train, y_train, alpha=0.1, epochs=1000)
 
-# Make predictions
-y_pred = predict(X_test, w, b)
-
-# Evaluate the model
 print("Weights and Bias:")
 for feature, weight in zip(X.columns, w):
     print(f"{feature}: {weight:.4f}")
 print(f"\nBias: {b:.4f}")
 
+# Make predictions
+y_pred = predict(X_test, w, b)
 
+# Evaluate the model
 # Accuracy
 def accuracy(y, y_pred):
     correct_predictions = np.sum(y == y_pred)
     return correct_predictions / len(y)
 
-# Precision
+# Precision (Specificity)
 def precision(y, y_pred):
     tp = np.sum((y == 1) & (y_pred == 1))
     fp = np.sum((y == 0) & (y_pred == 1))
@@ -89,7 +102,7 @@ def precision(y, y_pred):
         return 0
     return tp / (tp + fp)
 
-# Recall
+# Recall (Sensitivity)
 def recall(y, y_pred):
     tp = np.sum((y == 1) & (y_pred == 1))
     fn = np.sum((y == 1) & (y_pred == 0))
@@ -108,12 +121,12 @@ def f1_score(y, y_pred):
 # Confusion Matrix
 def confusion_matrix(y_true, y_pred):
     TP = np.sum((y_true == 1) & (y_pred == 1))
-    TN = np.sum((y_true == 0) & (y_pred == 0))
     FP = np.sum((y_true == 0) & (y_pred == 1))
     FN = np.sum((y_true == 1) & (y_pred == 0))
+    TN = np.sum((y_true == 0) & (y_pred == 0))
 
-    cm = np.array([[TN, FP],
-                   [FN, TP]])
+    cm = np.array([[TP, FP],
+                   [FN, TN]])
     return cm
 
 # Plot Confusion Matrix
@@ -121,7 +134,7 @@ def plot_confusion_matrix(y_true, y_pred):
     cm = confusion_matrix(y_true, y_pred)
     plt.figure(figsize=(7, 5))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
-                xticklabels=['No', 'Yes'], yticklabels=['No', 'Yes'])
+                xticklabels=['Positive(1)', 'Negative(0)'], yticklabels=['Positive(1)', 'Negative(0)'])
     plt.xlabel('Predicted')
     plt.ylabel('True')
     plt.title('Confusion Matrix')
@@ -145,10 +158,21 @@ def plot_roc_auc(X_test, y_test, w, b):
     plt.legend(loc='lower right')
     plt.show()
 
+def plot_cost_history(cost_history):
+    plt.figure(figsize=(10, 6))
+    plt.plot(range(len(cost_history)), cost_history, label='Cost')
+    plt.xlabel('Iterations')
+    plt.ylabel('Cost')
+    plt.title('Cost History over Iterations')
+    plt.legend()
+    plt.show()
+
 acc = accuracy(y_test, y_pred)
 prec = precision(y_test, y_pred)
 rec = recall(y_test, y_pred)
 f1 = f1_score(y_test, y_pred)
+
+print("\nEvaluating Metrics:")
 
 print(f"Accuracy: {acc:.2f}")
 print(f"Precision: {prec:.2f}")
@@ -160,3 +184,6 @@ plot_confusion_matrix(y_test, y_pred)
 
 # Plot ROC AUC
 plot_roc_auc(X_test, y_test, w, b)
+
+# Plot Cost History
+plot_cost_history(cost_history)
