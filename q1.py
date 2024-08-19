@@ -3,6 +3,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 from sklearn.preprocessing import RobustScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
@@ -23,6 +24,7 @@ upperbound = Q3 + 1.5 * IQR
 df = df[(df['Outcome'] >= lowerbound) & (df['Outcome'] <= upperbound)]
 
 df.corr()
+sns.heatmap(df.corr())
 
 # Define independent variables and the target variable
 X1 = df[["Glucose"]].values  # Convert to numpy array
